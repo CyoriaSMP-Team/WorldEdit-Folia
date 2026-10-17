@@ -177,6 +177,8 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         getServer().getPluginManager().registerEvents(new WorldEditListener(this), this);
         if (isFolia()) {
             getServer().getPluginManager().registerEvents(new Listener() {
+                @Keep
+                @SuppressWarnings("UnusedVariable")
                 @EventHandler(priority = EventPriority.MONITOR)
                 public void onServerLoad(ServerLoadEvent event) {
                     foliaServerReady = true;
