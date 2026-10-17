@@ -319,7 +319,7 @@ public class BukkitPlayer extends AbstractPlayerActor {
             }
             try {
                 return FoliaScheduler.callEntity(player, player::isOnline);
-            } catch (IllegalStateException retired) {
+            } catch (IllegalStateException _) {
                 return false;
             }
         }
@@ -341,7 +341,7 @@ public class BukkitPlayer extends AbstractPlayerActor {
         FoliaScheduler.callEntity(player, () -> {
             Location loc = new Location(world, pos.x(), pos.y(), pos.z());
             player.sendBlockChange(loc, blockData);
-            if (block != null && block.getBlockType() == BlockTypes.STRUCTURE_BLOCK && block instanceof BaseBlock baseBlock) {
+            if (block instanceof BaseBlock baseBlock && baseBlock.getBlockType() == BlockTypes.STRUCTURE_BLOCK) {
                 LinCompoundTag nbt = baseBlock.getNbt();
                 BukkitImplAdapter adapter = WorldEditPlugin.getInstance().getBukkitImplAdapter();
                 if (adapter != null && nbt != null) {

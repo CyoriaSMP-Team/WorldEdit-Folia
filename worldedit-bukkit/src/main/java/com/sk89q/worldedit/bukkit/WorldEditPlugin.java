@@ -430,7 +430,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
             previous = foliaCommandTails.put(senderId, current);
         }
 
-        Runnable dispatch = () -> getServer().getAsyncScheduler().runNow(this, task -> {
+        Runnable dispatch = () -> getServer().getAsyncScheduler().runNow(this, _ -> {
             try {
                 action.run();
             } catch (Throwable throwable) {
@@ -446,7 +446,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         if (previous == null) {
             dispatch.run();
         } else {
-            previous.whenComplete((ignored, throwable) -> dispatch.run());
+            previous.whenComplete((_, _) -> dispatch.run());
         }
     }
 

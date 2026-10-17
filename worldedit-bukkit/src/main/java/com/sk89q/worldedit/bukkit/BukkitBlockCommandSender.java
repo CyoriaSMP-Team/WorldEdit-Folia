@@ -20,8 +20,8 @@
 package com.sk89q.worldedit.bukkit;
 
 import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.extension.platform.AbstractCommandBlockActor;
 import com.sk89q.worldedit.bukkit.folia.FoliaScheduler;
+import com.sk89q.worldedit.extension.platform.AbstractCommandBlockActor;
 import com.sk89q.worldedit.session.SessionKey;
 import com.sk89q.worldedit.util.auth.AuthorizationException;
 import com.sk89q.worldedit.util.formatting.WorldEditText;

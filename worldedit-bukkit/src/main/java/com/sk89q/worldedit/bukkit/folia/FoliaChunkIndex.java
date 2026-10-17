@@ -45,12 +45,12 @@ public final class FoliaChunkIndex {
     }
 
     public static void loaded(UUID worldId, int chunkX, int chunkZ) {
-        LOADED.computeIfAbsent(worldId, ignored -> ConcurrentHashMap.newKeySet())
+        LOADED.computeIfAbsent(worldId, _ -> ConcurrentHashMap.newKeySet())
             .add(pack(chunkX, chunkZ));
     }
 
     public static void worldLoaded(UUID worldId) {
-        LOADED.computeIfAbsent(worldId, ignored -> ConcurrentHashMap.newKeySet());
+        LOADED.computeIfAbsent(worldId, _ -> ConcurrentHashMap.newKeySet());
     }
 
     public static void unloaded(UUID worldId, int chunkX, int chunkZ) {
@@ -85,6 +85,6 @@ public final class FoliaChunkIndex {
     }
 
     private static long pack(int x, int z) {
-        return ((long) x << 32) | (z & 0xffffffffL);
+        return ((long) x << 32) | (z & 0xFFFFFFFFL);
     }
 }
