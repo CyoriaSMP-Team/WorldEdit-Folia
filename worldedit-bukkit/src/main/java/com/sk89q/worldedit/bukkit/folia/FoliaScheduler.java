@@ -141,6 +141,15 @@ public final class FoliaScheduler {
         if (!isFolia() || Bukkit.isGlobalTickThread()) {
             return action.get();
         }
+        WorldEditPlugin plugin = WorldEditPlugin.getInstance();
+        if (!plugin.isFoliaServerReady()) {
+            // During onEnable, the global region scheduler has not started.
+            // Only the original bootstrap thread can safely inspect server registries here.
+            if (plugin.isFoliaBootstrapThread()) {
+                return action.get();
+            }
+            throw new IllegalStateException("Folia global scheduler is not ready during plugin startup");
+        }
         checkCanWait();
 
         CompletableFuture<T> result = new CompletableFuture<>();

@@ -78,6 +78,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -116,10 +117,23 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
     private BukkitServerInterface platform;
     private BukkitConfiguration config;
     private final Map<UUID, CompletableFuture<Void>> foliaCommandTails = new java.util.HashMap<>();
+    // Folia does not run global-region tasks until after plugin startup.
+    private volatile boolean foliaServerReady;
+    private Thread startupThread;
+
+    public boolean isFoliaServerReady() {
+        return foliaServerReady;
+    }
+
+    public boolean isFoliaBootstrapThread() {
+        return Thread.currentThread() == startupThread;
+    }
+
 
     @Override
     public void onLoad() {
         INSTANCE = this;
+        startupThread = Thread.currentThread();
 
         //noinspection ResultOfMethodCallIgnored
         getDataFolder().mkdirs();
@@ -162,6 +176,12 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         // Now we can register events
         getServer().getPluginManager().registerEvents(new WorldEditListener(this), this);
         if (isFolia()) {
+            getServer().getPluginManager().registerEvents(new Listener() {
+                @EventHandler(priority = EventPriority.MONITOR)
+                public void onServerLoad(ServerLoadEvent event) {
+                    foliaServerReady = true;
+                }
+            }, this);
             // Startup worlds already exist before registration; only bootstrap their
             // identities here. Loaded chunks are recorded by region-owned events.
             for (org.bukkit.World world : Bukkit.getWorlds()) {
@@ -314,6 +334,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
      */
     @Override
     public void onDisable() {
+        foliaServerReady = false;
         WorldEdit worldEdit = WorldEdit.getInstance();
         worldEdit.getSessionManager().unload();
         if (platform != null) {
