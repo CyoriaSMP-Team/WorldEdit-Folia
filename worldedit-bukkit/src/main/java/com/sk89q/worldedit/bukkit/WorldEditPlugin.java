@@ -416,6 +416,9 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         runFoliaPlayerTask(senderId, () -> getWorldEdit().getEventBus().post(event));
     }
 
+    // The whenComplete callback is the dispatch mechanism; the command tail is
+    // represented by `current`, which is completed explicitly after the work.
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void runFoliaPlayerTask(UUID senderId, Runnable action) {
         if (!isFolia()) {
             action.run();
