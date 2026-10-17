@@ -24,6 +24,7 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.bukkit.adapter.BukkitImplAdapter;
+import com.sk89q.worldedit.bukkit.folia.FoliaScheduler;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.extension.input.InputParseException;
 import com.sk89q.worldedit.extension.input.ParserContext;
@@ -199,7 +200,8 @@ public class BukkitAdapter {
         if (world instanceof BukkitWorld bukkitWorld) {
             return bukkitWorld.getWorld();
         } else {
-            org.bukkit.World match = Bukkit.getServer().getWorld(world.getName());
+            String name = world.getName();
+            org.bukkit.World match = FoliaScheduler.callGlobal(() -> Bukkit.getServer().getWorld(name));
             if (match != null) {
                 return match;
             } else {

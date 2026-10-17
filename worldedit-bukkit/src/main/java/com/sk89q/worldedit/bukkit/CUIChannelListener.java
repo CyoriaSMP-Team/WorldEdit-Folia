@@ -39,9 +39,17 @@ public class CUIChannelListener implements PluginMessageListener {
     @SuppressWarnings("deprecation")
     @Override
     public void onPluginMessageReceived(String channel, Player player, byte[] message) {
-        LocalSession session = plugin.getSession(player);
         String text = new String(message, StandardCharsets.UTF_8);
-        final BukkitPlayer actor = plugin.wrapPlayer(player);
+        if (plugin.isFolia()) {
+            plugin.runFoliaPlayerTask(player.getUniqueId(), () -> handleInitialization(player, text));
+        } else {
+            handleInitialization(player, text);
+        }
+    }
+
+    private void handleInitialization(Player player, String text) {
+        LocalSession session = plugin.getSession(player);
+        BukkitPlayer actor = plugin.wrapPlayer(player);
         session.handleCUIInitializationMessage(text, actor);
     }
 

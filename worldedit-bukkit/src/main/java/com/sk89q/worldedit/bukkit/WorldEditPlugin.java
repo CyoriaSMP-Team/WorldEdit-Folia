@@ -31,7 +31,8 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.adapter.AdapterLoadException;
 import com.sk89q.worldedit.bukkit.adapter.BukkitImplAdapter;
 import com.sk89q.worldedit.bukkit.adapter.BukkitImplLoader;
-import com.sk89q.worldedit.bukkit.folia.FoliaExtentListener;
+import com.sk89q.worldedit.bukkit.folia.FoliaChunkIndex;
+import com.sk89q.worldedit.bukkit.folia.FoliaChunkListener;
 import com.sk89q.worldedit.event.platform.CommandEvent;
 import com.sk89q.worldedit.event.platform.CommandSuggestionEvent;
 import com.sk89q.worldedit.event.platform.ConfigurationLoadEvent;
@@ -93,6 +94,8 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -112,6 +115,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         SimpleLifecycled.invalid();
     private BukkitServerInterface platform;
     private BukkitConfiguration config;
+    private final Map<UUID, CompletableFuture<Void>> foliaCommandTails = new java.util.HashMap<>();
 
     @Override
     public void onLoad() {
@@ -157,6 +161,9 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
 
         // Now we can register events
         getServer().getPluginManager().registerEvents(new WorldEditListener(this), this);
+        if (isFolia()) {
+            getServer().getPluginManager().registerEvents(new FoliaChunkListener(this), this);
+        }
         // register async tab complete, if available
         if (PaperLib.isPaper()) {
             getServer().getPluginManager().registerEvents(new AsyncTabCompleteListener(), this);
@@ -181,10 +188,6 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         new Metrics(this, BSTATS_PLUGIN_ID);
         PaperLib.suggestPaper(this);
 
-        if (isFolia()) {
-            // Inject Folia-anti-break extent
-            WorldEdit.getInstance().getEventBus().register(new FoliaExtentListener());
-        }
     }
 
     private void setupPreWorldData() {
@@ -321,6 +324,10 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
             this.getServer().getGlobalRegionScheduler().cancelTasks(this);
             this.getServer().getAsyncScheduler().cancelTasks(this);
             // Region schedulers do not support cancelling tasks
+            FoliaChunkIndex.clear();
+            synchronized (foliaCommandTails) {
+                foliaCommandTails.clear();
+            }
         } else {
             this.getServer().getScheduler().cancelTasks(this);
         }
@@ -385,9 +392,54 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
     public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
         String arguments = rebuildArguments(commandLabel, args);
         CommandEvent event = new CommandEvent(wrapCommandSender(sender), arguments);
-        getWorldEdit().getEventBus().post(event);
+        if (isFolia()) {
+            // WorldEdit's extent API is synchronous. Run its operation engine
+            // off-region and dispatch Bukkit access through FoliaScheduler.
+            UUID senderId = sender instanceof Player player
+                ? player.getUniqueId()
+                : UUID.nameUUIDFromBytes((sender.getClass().getName() + ":" + sender.getName())
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            postFoliaCommand(senderId, event);
+        } else {
+            getWorldEdit().getEventBus().post(event);
+        }
 
         return true;
+    }
+
+    private void postFoliaCommand(UUID senderId, CommandEvent event) {
+        runFoliaPlayerTask(senderId, () -> getWorldEdit().getEventBus().post(event));
+    }
+
+    public void runFoliaPlayerTask(UUID senderId, Runnable action) {
+        if (!isFolia()) {
+            action.run();
+            return;
+        }
+        CompletableFuture<Void> previous;
+        CompletableFuture<Void> current = new CompletableFuture<>();
+        synchronized (foliaCommandTails) {
+            previous = foliaCommandTails.put(senderId, current);
+        }
+
+        Runnable dispatch = () -> getServer().getAsyncScheduler().runNow(this, task -> {
+            try {
+                action.run();
+            } catch (Throwable throwable) {
+                LOGGER.error("Failed to execute WorldEdit work on Folia", throwable);
+            } finally {
+                current.complete(null);
+                synchronized (foliaCommandTails) {
+                    foliaCommandTails.remove(senderId, current);
+                }
+            }
+        });
+
+        if (previous == null) {
+            dispatch.run();
+        } else {
+            previous.whenComplete((ignored, throwable) -> dispatch.run());
+        }
     }
 
     @Override
