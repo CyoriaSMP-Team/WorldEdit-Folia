@@ -14,7 +14,7 @@ jobs:
     with:
       upstream_repo: EngineHub/WorldEdit
       upstream_branch: version/7.4.x
-      target_branch: version/7.4.x
+      target_branch: folia/1.21.11
       java_version: '25'
       build_system: gradle
       build_command: ./gradlew build -s
