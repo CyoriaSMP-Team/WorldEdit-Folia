@@ -47,6 +47,7 @@ public class CUIChannelListener implements PluginMessageListener {
         }
     }
 
+    @SuppressWarnings("deprecation") // The wire-format CUI parser is retained for backwards compatibility.
     private void handleInitialization(Player player, String text) {
         LocalSession session = plugin.getSession(player);
         BukkitPlayer actor = plugin.wrapPlayer(player);
