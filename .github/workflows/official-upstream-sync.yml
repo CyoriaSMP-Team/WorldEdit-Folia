@@ -1,0 +1,20 @@
+name: Official upstream sync review
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 3 * * *'
+
+jobs:
+  sync:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: CyoriaSMP-Team/Folia-Ports/.github/workflows/upstream-sync.yml@main
+    with:
+      upstream_repo: EngineHub/WorldEdit
+      upstream_branch: version/7.4.x
+      target_branch: version/7.4.x
+      java_version: '25'
+      build_system: gradle
+      build_command: ./gradlew build -s
