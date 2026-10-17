@@ -162,6 +162,11 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         // Now we can register events
         getServer().getPluginManager().registerEvents(new WorldEditListener(this), this);
         if (isFolia()) {
+            // Startup worlds already exist before registration; only bootstrap their
+            // identities here. Loaded chunks are recorded by region-owned events.
+            for (World world : Bukkit.getWorlds()) {
+                FoliaChunkIndex.worldLoaded(world.getUID());
+            }
             getServer().getPluginManager().registerEvents(new FoliaChunkListener(this), this);
         }
         // register async tab complete, if available
@@ -554,7 +559,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
      * @return an instance of the plugin
      * @throws NullPointerException if the plugin hasn't been enabled
      */
-    static WorldEditPlugin getInstance() {
+    public static WorldEditPlugin getInstance() {
         return checkNotNull(INSTANCE);
     }
 

@@ -57,6 +57,51 @@ public final class FoliaScheduler {
         return await(result);
     }
 
+    @FunctionalInterface
+    public interface CheckedSupplier<T, E extends Exception> {
+        T get() throws E;
+    }
+
+    private static final class CheckedOperationException extends RuntimeException {
+        private CheckedOperationException(Exception cause) {
+            super(cause);
+        }
+    }
+
+    /** Run work on its owning region without discarding checked WorldEdit failures. */
+    public static <T, E extends Exception> T callAtChecked(World world, int blockX, int blockZ,
+            CheckedSupplier<T, E> action) throws E {
+        try {
+            return callAt(world, blockX, blockZ, () -> unchecked(action));
+        } catch (CheckedOperationException wrapped) {
+            @SuppressWarnings("unchecked")
+            E cause = (E) wrapped.getCause();
+            throw cause;
+        }
+    }
+
+    /** Run entity-owned work and preserve its checked exception contract. */
+    public static <T, E extends Exception> T callEntityChecked(Entity entity,
+            CheckedSupplier<T, E> action) throws E {
+        try {
+            return callEntity(entity, () -> unchecked(action));
+        } catch (CheckedOperationException wrapped) {
+            @SuppressWarnings("unchecked")
+            E cause = (E) wrapped.getCause();
+            throw cause;
+        }
+    }
+
+    private static <T, E extends Exception> T unchecked(CheckedSupplier<T, E> action) {
+        try {
+            return action.get();
+        } catch (RuntimeException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CheckedOperationException(exception);
+        }
+    }
+
     public static void runAt(World world, int blockX, int blockZ, Runnable action) {
         callAt(world, blockX, blockZ, () -> {
             action.run();

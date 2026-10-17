@@ -20,10 +20,7 @@
 package com.sk89q.worldedit.bukkit.folia;
 
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
-import io.papermc.paper.threadedregions.RegionizedServerInitEvent;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
-import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -32,7 +29,6 @@ import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 
-import java.util.ArrayList;
 import java.util.UUID;
 
 /** Maintains FoliaChunkIndex from region-safe lifecycle callbacks. */
@@ -44,19 +40,9 @@ public final class FoliaChunkListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
-    public void onServerReady(RegionizedServerInitEvent event) {
-        if (!plugin.isFolia()) {
-            return;
-        }
-        for (World world : Bukkit.getWorlds()) {
-            ArrayList<FoliaChunkIndex.ChunkPosition> chunks = new ArrayList<>();
-            for (Chunk chunk : world.getLoadedChunks()) {
-                chunks.add(new FoliaChunkIndex.ChunkPosition(chunk.getX(), chunk.getZ()));
-            }
-            FoliaChunkIndex.initialize(world.getUID(), chunks);
-        }
-    }
+    // Folia does not permit a single global scan of loaded chunks on a tick thread.
+    // Track chunk lifecycle events instead; preexisting chunks remain unknown until
+    // their next load event and are never accessed from an unrelated region.
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {

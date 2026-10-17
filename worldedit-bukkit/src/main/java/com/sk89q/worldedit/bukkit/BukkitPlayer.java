@@ -88,7 +88,7 @@ public class BukkitPlayer extends AbstractPlayerActor {
 
     @Override
     public BaseBlock getBlockInHand(HandSide handSide) throws WorldEditException {
-        return FoliaScheduler.callEntity(player, () -> {
+        return FoliaScheduler.callEntityChecked(player, () -> {
             ItemStack itemStack = handSide == HandSide.MAIN_HAND
                 ? player.getInventory().getItemInMainHand()
                 : player.getInventory().getItemInOffHand();
@@ -202,8 +202,9 @@ public class BukkitPlayer extends AbstractPlayerActor {
         if (params.length > 0) {
             send = send + "|" + StringUtil.joinString(params, "|");
         }
+        final byte[] message = send.getBytes(StandardCharsets.UTF_8);
         FoliaScheduler.callEntity(player, () -> {
-            player.sendPluginMessage(plugin, WorldEditPlugin.CUI_PLUGIN_CHANNEL, send.getBytes(StandardCharsets.UTF_8));
+            player.sendPluginMessage(plugin, WorldEditPlugin.CUI_PLUGIN_CHANNEL, message);
             return null;
         });
     }

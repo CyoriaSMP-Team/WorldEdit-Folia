@@ -386,7 +386,8 @@ public class BukkitWorld extends AbstractWorld {
 
     @Override
     public boolean generateTree(com.sk89q.worldedit.world.generation.TreeType type, EditSession editSession, BlockVector3 position) throws MaxChangedBlocksException {
-        return at(position, () -> {
+        ensureLoaded();
+        return FoliaScheduler.callAtChecked(getWorld(), position.x(), position.z(), () -> {
             Boolean customResult = WorldEditTreeGeneration.handleWorldEditTrees(this, type, editSession, position);
             if (customResult != null) {
                 return customResult;
@@ -398,7 +399,7 @@ public class BukkitWorld extends AbstractWorld {
 
     @Override
     public void dropItem(Vector3 pt, BaseItemStack item) {
-        BlockVector3 block = BlockVector3.at(pt);
+        BlockVector3 block = BlockVector3.at(pt.x(), pt.y(), pt.z());
         at(block, () -> {
             World world = getWorld();
             world.dropItemNaturally(BukkitAdapter.adapt(world, pt), BukkitAdapter.adapt(item));
@@ -473,7 +474,7 @@ public class BukkitWorld extends AbstractWorld {
         if (effect == null) {
             return false;
         }
-        BlockVector3 block = BlockVector3.at(position);
+        BlockVector3 block = BlockVector3.at(position.x(), position.y(), position.z());
         return at(block, () -> {
             World world = getWorld();
             world.playEffect(BukkitAdapter.adapt(world, position), effect, data);
