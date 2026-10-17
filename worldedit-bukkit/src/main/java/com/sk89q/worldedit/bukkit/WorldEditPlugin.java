@@ -164,7 +164,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         if (isFolia()) {
             // Startup worlds already exist before registration; only bootstrap their
             // identities here. Loaded chunks are recorded by region-owned events.
-            for (World world : Bukkit.getWorlds()) {
+            for (org.bukkit.World world : Bukkit.getWorlds()) {
                 FoliaChunkIndex.worldLoaded(world.getUID());
             }
             getServer().getPluginManager().registerEvents(new FoliaChunkListener(this), this);
