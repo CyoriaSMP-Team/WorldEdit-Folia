@@ -19,6 +19,7 @@
 
 package com.sk89q.worldedit.bukkit;
 
+import com.sk89q.worldedit.bukkit.folia.FoliaScheduler;
 import com.sk89q.worldedit.entity.metadata.EntityProperties;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Ambient;
@@ -43,6 +44,8 @@ import org.bukkit.entity.Tameable;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.WaterMob;
 import org.bukkit.entity.minecart.ExplosiveMinecart;
+
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -70,105 +73,109 @@ class BukkitEntityProperties implements EntityProperties {
 
     @Override
     public boolean isPlayerDerived() {
-        return entity instanceof HumanEntity;
+        return onEntity(() -> entity instanceof HumanEntity);
     }
 
     @Override
     public boolean isProjectile() {
-        return entity instanceof Projectile;
+        return onEntity(() -> entity instanceof Projectile);
     }
 
     @Override
     public boolean isItem() {
-        return entity instanceof Item;
+        return onEntity(() -> entity instanceof Item);
     }
 
     @Override
     public boolean isFallingBlock() {
-        return entity instanceof FallingBlock;
+        return onEntity(() -> entity instanceof FallingBlock);
     }
 
     @Override
     public boolean isPainting() {
-        return entity instanceof Painting;
+        return onEntity(() -> entity instanceof Painting);
     }
 
     @Override
     public boolean isItemFrame() {
-        return entity instanceof ItemFrame;
+        return onEntity(() -> entity instanceof ItemFrame);
     }
 
     @Override
     public boolean isBoat() {
-        return entity instanceof Boat;
+        return onEntity(() -> entity instanceof Boat);
     }
 
     @Override
     public boolean isMinecart() {
-        return entity instanceof Minecart;
+        return onEntity(() -> entity instanceof Minecart);
     }
 
     @Override
     public boolean isTNT() {
-        return entity instanceof TNTPrimed || entity instanceof ExplosiveMinecart;
+        return onEntity(() -> entity instanceof TNTPrimed || entity instanceof ExplosiveMinecart);
     }
 
     @Override
     public boolean isExperienceOrb() {
-        return entity instanceof ExperienceOrb;
+        return onEntity(() -> entity instanceof ExperienceOrb);
     }
 
     @Override
     public boolean isLiving() {
-        return entity instanceof LivingEntity;
+        return onEntity(() -> entity instanceof LivingEntity);
     }
 
     @Override
     public boolean isAnimal() {
-        return entity instanceof Animals;
+        return onEntity(() -> entity instanceof Animals);
     }
 
     @Override
     public boolean isAmbient() {
-        return entity instanceof Ambient;
+        return onEntity(() -> entity instanceof Ambient);
     }
 
     @Override
     public boolean isNPC() {
         if (HAS_ABSTRACT_VILLAGER) {
-            return entity instanceof AbstractVillager;
+            return onEntity(() -> entity instanceof AbstractVillager);
         }
-        return entity instanceof Villager;
+        return onEntity(() -> entity instanceof Villager);
     }
 
     @Override
     public boolean isGolem() {
-        return entity instanceof Golem;
+        return onEntity(() -> entity instanceof Golem);
     }
 
     @Override
     public boolean isTamed() {
-        return entity instanceof Tameable tameable && tameable.isTamed();
+        return onEntity(() -> entity instanceof Tameable tameable && tameable.isTamed());
     }
 
     @Override
     @SuppressWarnings("deprecation")
     public boolean isTagged() {
-        return entity instanceof LivingEntity && entity.getCustomName() != null;
+        return onEntity(() -> entity instanceof LivingEntity && entity.getCustomName() != null);
     }
 
     @Override
     public boolean isArmorStand() {
-        return entity instanceof ArmorStand;
+        return onEntity(() -> entity instanceof ArmorStand);
     }
 
     @Override
     public boolean isPasteable() {
-        return !(entity instanceof Player || entity instanceof ComplexEntityPart);
+        return onEntity(() -> !(entity instanceof Player || entity instanceof ComplexEntityPart));
     }
 
     @Override
     public boolean isWaterCreature() {
-        return entity instanceof WaterMob;
+        return onEntity(() -> entity instanceof WaterMob);
+    }
+
+    private boolean onEntity(Supplier<Boolean> action) {
+        return FoliaScheduler.callEntity(entity, action);
     }
 }

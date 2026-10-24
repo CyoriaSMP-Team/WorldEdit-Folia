@@ -20,6 +20,7 @@
 package com.sk89q.worldedit.bukkit;
 
 import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.bukkit.folia.FoliaScheduler;
 import com.sk89q.worldedit.extension.platform.AbstractCommandBlockActor;
 import com.sk89q.worldedit.session.SessionKey;
 import com.sk89q.worldedit.util.auth.AuthorizationException;
@@ -43,6 +44,9 @@ public class BukkitBlockCommandSender extends AbstractCommandBlockActor {
     private final BlockCommandSender sender;
     private final WorldEditPlugin plugin;
     private final UUID uuid;
+    private final Block block;
+    private final org.bukkit.Location blockLocation;
+    private final String senderName;
 
     public BukkitBlockCommandSender(WorldEditPlugin plugin, BlockCommandSender sender) {
         super(BukkitAdapter.adapt(checkNotNull(sender).getBlock().getLocation()));
@@ -50,20 +54,21 @@ public class BukkitBlockCommandSender extends AbstractCommandBlockActor {
 
         this.plugin = plugin;
         this.sender = sender;
+        this.block = sender.getBlock();
+        this.blockLocation = this.block.getLocation().clone();
+        this.senderName = sender.getName();
         this.uuid = UUID.nameUUIDFromBytes((UUID_PREFIX + sender.getName()).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public String getName() {
-        return sender.getName();
+        return senderName;
     }
 
     @Override
     @Deprecated
     public void printRaw(String msg) {
-        for (String part : msg.split("\n", 0)) {
-            sender.sendMessage(part);
-        }
+        sendParts(msg, "");
     }
 
     @Override
@@ -92,7 +97,19 @@ public class BukkitBlockCommandSender extends AbstractCommandBlockActor {
 
     @Override
     public void print(Component component) {
-        TextAdapter.sendMessage(sender, WorldEditText.format(component, getLocale()));
+        FoliaScheduler.callAt(blockLocation.getWorld(), blockLocation.getBlockX(), blockLocation.getBlockZ(), () -> {
+            TextAdapter.sendMessage(sender, WorldEditText.format(component, getLocale()));
+            return null;
+        });
+    }
+
+    private void sendParts(String msg, String prefix) {
+        FoliaScheduler.callAt(blockLocation.getWorld(), blockLocation.getBlockX(), blockLocation.getBlockZ(), () -> {
+            for (String part : msg.split("\n", 0)) {
+                sender.sendMessage(prefix + part);
+            }
+            return null;
+        });
     }
 
     @Override
@@ -119,7 +136,8 @@ public class BukkitBlockCommandSender extends AbstractCommandBlockActor {
 
     @Override
     public boolean hasPermission(String permission) {
-        return sender.hasPermission(permission);
+        return FoliaScheduler.callAt(blockLocation.getWorld(), blockLocation.getBlockX(), blockLocation.getBlockZ(),
+            () -> sender.hasPermission(permission));
     }
 
     public BlockCommandSender getSender() {
@@ -134,7 +152,6 @@ public class BukkitBlockCommandSender extends AbstractCommandBlockActor {
 
             private void updateActive() {
                 try {
-                    Block block = sender.getBlock();
                     if (!block.getWorld().isChunkLoaded(block.getX() >> 4, block.getZ() >> 4)) {
                         active = false;
                         return;
@@ -150,22 +167,17 @@ public class BukkitBlockCommandSender extends AbstractCommandBlockActor {
 
             @Override
             public String getName() {
-                return sender.getName();
+                return senderName;
             }
 
             @Override
             public boolean isActive() {
                 if (WorldEditPlugin.getInstance().isFolia()) {
-                    // On Folia, we need to perform the update on the thread that owns the block.
-                    if (Bukkit.isOwnedByCurrentRegion(sender.getBlock())) {
-                        // This thread owns the block, so we can immediately update.
-                        updateActive();
-                    } else {
-                        // We need to delegate to the right thread.
-                        Bukkit.getRegionScheduler().execute(plugin, sender.getBlock().getLocation(), this::updateActive);
-                    }
-
-                    return active;
+                    return FoliaScheduler.callAt(blockLocation.getWorld(), blockLocation.getBlockX(),
+                        blockLocation.getBlockZ(), () -> {
+                            updateActive();
+                            return active;
+                        });
                 }
 
                 if (Bukkit.isPrimaryThread()) {

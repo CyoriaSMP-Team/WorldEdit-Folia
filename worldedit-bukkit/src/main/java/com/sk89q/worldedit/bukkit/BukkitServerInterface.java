@@ -25,6 +25,7 @@ import com.sk89q.bukkit.util.CommandRegistration;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.adapter.BukkitImplAdapter;
+import com.sk89q.worldedit.bukkit.folia.FoliaScheduler;
 import com.sk89q.worldedit.command.util.PermissionCondition;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.AbstractPlatform;
@@ -90,10 +91,12 @@ public class BukkitServerInterface extends AbstractPlatform implements MultiUser
     @SuppressWarnings("deprecation")
     @Override
     public int getDataVersion() {
-        if (plugin.getLifecycledBukkitImplAdapter().isValid()) {
-            return Bukkit.getUnsafe().getDataVersion();
-        }
-        return -1;
+        return FoliaScheduler.callGlobal(() -> {
+            if (plugin.getLifecycledBukkitImplAdapter().isValid()) {
+                return Bukkit.getUnsafe().getDataVersion();
+            }
+            return -1;
+        });
     }
 
     @Override
@@ -138,14 +141,14 @@ public class BukkitServerInterface extends AbstractPlatform implements MultiUser
 
     @Override
     public List<com.sk89q.worldedit.world.World> getWorlds() {
-        List<World> worlds = server.getWorlds();
-        List<com.sk89q.worldedit.world.World> ret = new ArrayList<>(worlds.size());
-
-        for (World world : worlds) {
-            ret.add(BukkitAdapter.adapt(world));
-        }
-
-        return ret;
+        return FoliaScheduler.callGlobal(() -> {
+            List<World> worlds = server.getWorlds();
+            List<com.sk89q.worldedit.world.World> ret = new ArrayList<>(worlds.size());
+            for (World world : worlds) {
+                ret.add(BukkitAdapter.adapt(world));
+            }
+            return ret;
+        });
     }
 
     @Nullable
@@ -154,7 +157,8 @@ public class BukkitServerInterface extends AbstractPlatform implements MultiUser
         if (player instanceof BukkitPlayer) {
             return player;
         } else {
-            org.bukkit.entity.Player bukkitPlayer = server.getPlayerExact(player.getName());
+            String name = player.getName();
+            org.bukkit.entity.Player bukkitPlayer = FoliaScheduler.callGlobal(() -> server.getPlayerExact(name));
             return bukkitPlayer != null ? WorldEditPlugin.getInstance().wrapPlayer(bukkitPlayer) : null;
         }
     }
@@ -165,7 +169,8 @@ public class BukkitServerInterface extends AbstractPlatform implements MultiUser
         if (world instanceof BukkitWorld bukkitWorld) {
             return bukkitWorld;
         } else {
-            World bukkitWorld = server.getWorld(world.getName());
+            String name = world.getName();
+            World bukkitWorld = FoliaScheduler.callGlobal(() -> server.getWorld(name));
             return bukkitWorld != null ? new BukkitWorld(bukkitWorld) : null;
         }
     }
@@ -252,7 +257,7 @@ public class BukkitServerInterface extends AbstractPlatform implements MultiUser
     @Override
     public long getTickCount() {
         if (PaperLib.isPaper()) {
-            return Bukkit.getCurrentTick();
+            return FoliaScheduler.callGlobal(() -> (long) Bukkit.getCurrentTick());
         }
         return super.getTickCount();
     }
@@ -263,10 +268,12 @@ public class BukkitServerInterface extends AbstractPlatform implements MultiUser
 
     @Override
     public Collection<Actor> getConnectedUsers() {
-        List<Actor> users = new ArrayList<>();
-        for (org.bukkit.entity.Player player : Bukkit.getServer().getOnlinePlayers()) {
-            users.add(WorldEditPlugin.getInstance().wrapPlayer(player));
-        }
-        return users;
+        return FoliaScheduler.callGlobal(() -> {
+            List<Actor> users = new ArrayList<>();
+            for (org.bukkit.entity.Player player : Bukkit.getServer().getOnlinePlayers()) {
+                users.add(WorldEditPlugin.getInstance().wrapPlayer(player));
+            }
+            return users;
+        });
     }
 }
