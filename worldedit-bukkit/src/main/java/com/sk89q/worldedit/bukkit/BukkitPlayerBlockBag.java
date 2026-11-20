@@ -20,6 +20,7 @@
 package com.sk89q.worldedit.bukkit;
 
 import com.sk89q.worldedit.blocks.BaseItemStack;
+import com.sk89q.worldedit.bukkit.folia.FoliaScheduler;
 import com.sk89q.worldedit.extent.inventory.BlockBag;
 import com.sk89q.worldedit.extent.inventory.BlockBagException;
 import com.sk89q.worldedit.extent.inventory.OutOfBlocksException;
@@ -28,6 +29,8 @@ import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.world.block.BlockState;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.Arrays;
 
 public class BukkitPlayerBlockBag extends BlockBag {
 
@@ -48,7 +51,9 @@ public class BukkitPlayerBlockBag extends BlockBag {
      */
     private void loadInventory() {
         if (items == null) {
-            items = player.getInventory().getContents();
+            items = FoliaScheduler.callEntity(player, () -> Arrays.stream(player.getInventory().getContents())
+                .map(item -> item == null ? null : item.clone())
+                .toArray(ItemStack[]::new));
         }
     }
 
@@ -167,8 +172,12 @@ public class BukkitPlayerBlockBag extends BlockBag {
     @Override
     public void flushChanges() {
         if (items != null) {
-            player.getInventory().setContents(items);
+            ItemStack[] updated = items;
             items = null;
+            FoliaScheduler.callEntity(player, () -> {
+                player.getInventory().setContents(updated);
+                return null;
+            });
         }
     }
 

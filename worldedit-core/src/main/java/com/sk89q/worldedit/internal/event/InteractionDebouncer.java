@@ -22,17 +22,22 @@ package com.sk89q.worldedit.internal.event;
 import com.sk89q.worldedit.extension.platform.Platform;
 import com.sk89q.worldedit.util.Identifiable;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 
 public class InteractionDebouncer {
-    private final Platform platform;
-    private final Map<UUID, Interaction> lastInteractions = new HashMap<>();
+    private final LongSupplier ticks;
+    private final Map<UUID, Interaction> lastInteractions = new ConcurrentHashMap<>();
 
     public InteractionDebouncer(Platform platform) {
-        this.platform = platform;
+        this(platform::getTickCount);
+    }
+
+    public InteractionDebouncer(LongSupplier ticks) {
+        this.ticks = ticks;
     }
 
     public void clearInteraction(Identifiable player) {
@@ -40,7 +45,7 @@ public class InteractionDebouncer {
     }
 
     public void setLastInteraction(Identifiable player, boolean result) {
-        lastInteractions.put(player.getUniqueId(), new Interaction(platform.getTickCount(), result));
+        lastInteractions.put(player.getUniqueId(), new Interaction(ticks.getAsLong(), result));
     }
 
     public Optional<Boolean> getDuplicateInteractionResult(Identifiable player) {
@@ -49,7 +54,7 @@ public class InteractionDebouncer {
             return Optional.empty();
         }
 
-        long now = platform.getTickCount();
+        long now = ticks.getAsLong();
         if (now - last.tick <= 1) {
             return Optional.of(last.result);
         }

@@ -20,14 +20,13 @@
 package com.sk89q.worldedit.bukkit;
 
 import com.sk89q.worldedit.bukkit.adapter.BukkitImplAdapter;
+import com.sk89q.worldedit.bukkit.folia.FoliaScheduler;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.entity.metadata.EntityProperties;
 import com.sk89q.worldedit.extent.Extent;
-import com.sk89q.worldedit.regions.RegionOperationException;
 import com.sk89q.worldedit.util.Location;
-import com.sk89q.worldedit.util.formatting.text.TranslatableComponent;
 import com.sk89q.worldedit.world.NullWorld;
 
 import java.lang.ref.WeakReference;
@@ -56,7 +55,7 @@ class BukkitEntity implements Entity {
     public Extent getExtent() {
         org.bukkit.entity.Entity entity = entityRef.get();
         if (entity != null) {
-            return BukkitAdapter.adapt(entity.getWorld());
+            return FoliaScheduler.callEntity(entity, () -> BukkitAdapter.adapt(entity.getWorld()));
         } else {
             return NullWorld.getInstance();
         }
@@ -66,7 +65,7 @@ class BukkitEntity implements Entity {
     public Location getLocation() {
         org.bukkit.entity.Entity entity = entityRef.get();
         if (entity != null) {
-            return BukkitAdapter.adapt(entity.getLocation());
+            return FoliaScheduler.callEntity(entity, () -> BukkitAdapter.adapt(entity.getLocation()));
         } else {
             return new Location(NullWorld.getInstance());
         }
@@ -76,12 +75,13 @@ class BukkitEntity implements Entity {
     public boolean setLocation(Location location) {
         org.bukkit.entity.Entity entity = entityRef.get();
         if (entity != null) {
-            if (WorldEditPlugin.getInstance().isFolia()) {
-                var _  = entity.teleportAsync(BukkitAdapter.adapt(location));
-                return true;
-            } else {
+            return FoliaScheduler.callEntity(entity, () -> {
+                if (WorldEditPlugin.getInstance().isFolia()) {
+                    var _ = entity.teleportAsync(BukkitAdapter.adapt(location));
+                    return true;
+                }
                 return entity.teleport(BukkitAdapter.adapt(location));
-            }
+            });
         } else {
             return false;
         }
@@ -91,16 +91,13 @@ class BukkitEntity implements Entity {
     public BaseEntity getState() {
         org.bukkit.entity.Entity entity = entityRef.get();
         if (entity != null) {
-            if (entity instanceof Player) {
-                return null;
-            }
-
-            BukkitImplAdapter adapter = WorldEditPlugin.getInstance().getBukkitImplAdapter();
-            if (adapter != null) {
-                return adapter.getEntity(entity);
-            } else {
-                return null;
-            }
+            return FoliaScheduler.callEntity(entity, () -> {
+                if (entity instanceof Player) {
+                    return null;
+                }
+                BukkitImplAdapter adapter = WorldEditPlugin.getInstance().getBukkitImplAdapter();
+                return adapter == null ? null : adapter.getEntity(entity);
+            });
         } else {
             return null;
         }
@@ -108,18 +105,16 @@ class BukkitEntity implements Entity {
 
     @Override
     public boolean remove() {
-        if (WorldEditPlugin.getInstance().isFolia()) {
-            throw new RuntimeException(new RegionOperationException(TranslatableComponent.of("worldedit.bukkit.unsupported-on-folia")));
-        }
-
         org.bukkit.entity.Entity entity = entityRef.get();
         if (entity != null) {
-            try {
-                entity.remove();
-            } catch (UnsupportedOperationException _) {
-                return false;
-            }
-            return entity.isDead();
+            return FoliaScheduler.callEntity(entity, () -> {
+                try {
+                    entity.remove();
+                } catch (UnsupportedOperationException _) {
+                    return false;
+                }
+                return entity.isDead();
+            });
         } else {
             return true;
         }

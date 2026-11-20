@@ -20,6 +20,7 @@
 package com.sk89q.worldedit.bukkit;
 
 import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.bukkit.folia.FoliaScheduler;
 import com.sk89q.worldedit.extension.platform.AbstractNonPlayerActor;
 import com.sk89q.worldedit.session.SessionKey;
 import com.sk89q.worldedit.util.formatting.WorldEditText;
@@ -43,6 +44,7 @@ public class BukkitCommandSender extends AbstractNonPlayerActor {
     private static final UUID DEFAULT_ID = UUID.fromString("a233eb4b-4cab-42cd-9fd9-7e7b9a3f74be");
 
     private final CommandSender sender;
+    private final String senderName;
 
     public BukkitCommandSender(WorldEditPlugin plugin, CommandSender sender) {
         checkNotNull(plugin);
@@ -50,6 +52,7 @@ public class BukkitCommandSender extends AbstractNonPlayerActor {
         checkArgument(!(sender instanceof Player), "Cannot wrap a player");
 
         this.sender = sender;
+        this.senderName = sender.getName();
     }
 
     @Override
@@ -59,44 +62,48 @@ public class BukkitCommandSender extends AbstractNonPlayerActor {
 
     @Override
     public String getName() {
-        return sender.getName();
+        return senderName;
     }
 
     @Override
     @Deprecated
     public void printRaw(String msg) {
-        for (String part : msg.split("\n", 0)) {
-            sender.sendMessage(part);
-        }
+        sendParts(msg, "");
     }
 
     @Override
     @Deprecated
     public void print(String msg) {
-        for (String part : msg.split("\n", 0)) {
-            sender.sendMessage("§d" + part);
-        }
+        sendParts(msg, "§d");
     }
 
     @Override
     @Deprecated
     public void printDebug(String msg) {
-        for (String part : msg.split("\n", 0)) {
-            sender.sendMessage("§7" + part);
-        }
+        sendParts(msg, "§7");
     }
 
     @Override
     @Deprecated
     public void printError(String msg) {
-        for (String part : msg.split("\n", 0)) {
-            sender.sendMessage("§c" + part);
-        }
+        sendParts(msg, "§c");
     }
 
     @Override
     public void print(Component component) {
-        TextAdapter.sendMessage(sender, WorldEditText.format(component, getLocale()));
+        FoliaScheduler.callGlobal(() -> {
+            TextAdapter.sendMessage(sender, WorldEditText.format(component, getLocale()));
+            return null;
+        });
+    }
+
+    private void sendParts(String message, String prefix) {
+        FoliaScheduler.callGlobal(() -> {
+            for (String part : message.split("\n", 0)) {
+                sender.sendMessage(prefix + part);
+            }
+            return null;
+        });
     }
 
     @Override
@@ -128,7 +135,7 @@ public class BukkitCommandSender extends AbstractNonPlayerActor {
             @Nullable
             @Override
             public String getName() {
-                return sender.getName();
+                return senderName;
             }
 
             @Override
