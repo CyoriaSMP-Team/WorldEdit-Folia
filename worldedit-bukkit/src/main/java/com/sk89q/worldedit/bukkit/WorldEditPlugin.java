@@ -31,6 +31,7 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.adapter.AdapterLoadException;
 import com.sk89q.worldedit.bukkit.adapter.BukkitImplAdapter;
 import com.sk89q.worldedit.bukkit.adapter.BukkitImplLoader;
+import com.sk89q.worldedit.bukkit.folia.FoliaExtentListener;
 import com.sk89q.worldedit.bukkit.folia.FoliaChunkIndex;
 import com.sk89q.worldedit.bukkit.folia.FoliaChunkListener;
 import com.sk89q.worldedit.event.platform.CommandEvent;
@@ -214,6 +215,11 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         // Enable metrics
         new Metrics(this, BSTATS_PLUGIN_ID);
         PaperLib.suggestPaper(this);
+
+        if (isFolia()) {
+            // Prevent edit sessions from writing outside the owning Folia region.
+            WorldEdit.getInstance().getEventBus().register(new FoliaExtentListener());
+        }
 
     }
 
