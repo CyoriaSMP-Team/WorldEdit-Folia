@@ -40,7 +40,13 @@ jobs:
           mkdir -p runtime/plugins
           curl -fL "$URL" -o runtime/folia.jar
           echo "$SUM  runtime/folia.jar" | sha256sum -c -
-          JAR="$(find worldedit-bukkit/build/libs -maxdepth 1 -type f -name 'worldedit-bukkit-*.jar' ! -name '*sources*' ! -name '*javadoc*' | head -n1)"
+          JAR=""
+          while IFS= read -r candidate; do
+            if jar tf "$candidate" 2>/dev/null | grep -qx 'com/sk89q/worldedit/LocalConfiguration.class'; then
+              JAR="$candidate"
+              break
+            fi
+          done < <(find worldedit-bukkit/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' ! -name '*javadoc*' | sort)
           test -n "$JAR"
           cp "$JAR" runtime/plugins/WorldEdit.jar
           echo 'eula=true' > runtime/eula.txt
